@@ -1,0 +1,5 @@
+__ Convert C# GUI to cobra
+__ C# to Cobra converter
+__ Debugger hookup
+__ Scratch to Cobra converter
+__ Cobra / Fuse support
