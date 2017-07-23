@@ -2,6 +2,7 @@
 Cobra Command Line Program (compiler and more)
 """
 
+use System.Collections
 use System.Diagnostics
 use System.Reflection
 use System.Text.RegularExpressions
@@ -24,6 +25,8 @@ class OptionSpec inherits Dictionary<of String, dynamic>
 	var _hasDefault = false
 	var _default = ''
 	var _choices = List<of String>()
+
+	pro listener from var as IProcessListener
 
 	get isUnpacked from var
 
@@ -68,13 +71,14 @@ class OptionSpec inherits Dictionary<of String, dynamic>
 
 	def unpack
 		_name = this['name'] to String
-		try
-			_type = this['type'] to String
-		catch KeyNotFoundException
-			if .containsKey('isAccumulator') and this['isAccumulator'] to bool
-				this['type'] = _type = 'accumulator'
-			else
-				this['type'] = 'string'
+		tmp as Object?
+		
+		if .tryGetValue("type",out tmp)
+			_type = tmp to String
+		else if .containsKey('isAccumulator') and this['isAccumulator'] to bool
+			this['type'] = _type = 'accumulator'
+		else
+			this['type'] = 'string'
 		if _type == 'main'
 			_isMain, _type = true, 'bool'
 		if .containsKey('is-main'), _isMain = this['is-main'] to bool
@@ -560,14 +564,15 @@ class CommandLine
 		# period of time where this Cobra source represents an svn-post-RELEASE.
 		# Keep three components to the version number: X.Y.Z
 
-		ver = 'svn:[CompileTimeInfo.subversionRevision] (post 0.9.6) / [CompileTimeInfo.date]'
-		return ver
+		# ver = 'svn:[CompileTimeInfo.subversionRevision] (post 0.9.5) / [CompileTimeInfo.date]'
+		# return ver
+		return '0.9.6'
 
 	get platformString as String is shared
 		return .clrVersion + ' on ' + .opSysString
 
 	get clrVersion as String is shared
-		""" Get runtime version, like '.NET CLR v4.0.30319' or 'Mono 3.2.3 CLR v4.0.30319'. """
+		""" Get runtime version, like '.NET CLR v4.0.30319' or 'Mono 2.6.7 CLR v2.0.50727'. """
 		if CobraCore.isRunningOnMono
 			ver = 'Mono'
 			try
@@ -605,8 +610,9 @@ class CommandLine
 	var _compiler as Compiler?
 	var _argParser as ArgParser
 
-	cue init
+	cue init(processListener as IProcessListener?)
 		base.init
+		.listener = processListener
 		_startTime = DateTime.now
 		_argParser = ArgParser(.versionString, nil)
 
@@ -615,6 +621,8 @@ class CommandLine
 	get options from var
 
 	get argParser from var
+	
+	pro listener from var as IProcessListener? 
 
 	get verboseLineSeparator as String
 		try
@@ -628,36 +636,40 @@ class CommandLine
 	get verbosity as int
 		return _verbosity
 
-	def parseArgs(args as List<of String>)
-		.parseArgs(args, out _options, out _pathList)
+	def parseArgs(args as List<of String>, verbosity as int)
+		.parseArgs(args,verbosity, out _options, out _pathList)
 
-	def parseArgs(args as IList<of String>, options as out OptionValues?, paths as out List<of String>?)
+	def parseArgs(args as IList<of String>, verbosity as int, options as out OptionValues?, paths as out List<of String>?)
 		try
 			_argParser.parseArgs(args, out options, out paths)
 		catch ape as ArgParseException
 			options = nil
 			paths = nil
 			.error(ape.message)
-		_verbosity = _argParser.verbosity
+		_verbosity = Math.max( _argParser.verbosity, verbosity)
 		CobraMain.willTimeIt = _argParser.willTimeIt
 		
-	def run
+	def run(args as CobraArgs?)
 		"""
 		Run the command line using the command line arguments.
 		"""
-		.run(CobraCore.commandLineArgs[1:])
+		.run(args,CobraCore.commandLineArgs[1:])
 
-	def run(args as List<of String>)
+	def run(appArgs as CobraArgs?, args as List<of String>)
 		"""
 		Run the command line using the given arguments.
 		The `args` should include only the arguments and not the executable/program name.
 		"""
-		if args.count == 0
+		if args.count == 0 and (appArgs is nil or appArgs.paths.count == 0)
 			.doAbout
 			return
-		.parseArgs(args)
+		if appArgs is nil
+			.parseArgs(args, 0)
+		else
+			.parseArgs(args, appArgs.verbosity)
+			appArgs.setOptions(_options)
 
-		if _options.boolValue('output-html')
+		if _options.boolValue('output-html') 
 			_htmlWriter = HtmlWriter(Console.out)
 			dest = _htmlWriter to TextWriter
 		else
@@ -667,6 +679,8 @@ class CommandLine
 			_htmlWriter.writeHtml('<html><head><link href="file://[stylePath]" rel=stylesheet type="text/css"></head><body>[_htmlWriter.newLine]')
 		print to dest
 			paths = _pathList to !
+			if appArgs is not nil
+				paths.addRange(appArgs.paths)
 			options = _options
 			if .verbosity > 0
 				print 'Cobra Command Line [.versionString]'
@@ -682,29 +696,29 @@ class CommandLine
 				print 'Paths:'
 				for path in paths
 					print '    [path]'
-			if options.boolValue('testify')
+			if options.boolValue('testify') 
 				.doTestify(paths)
-			else if options.boolValue('run')
+			else if options.boolValue('run') 
 				.doRun(paths)
-			else if options.boolValue('test')
+			else if options.boolValue('test') 
 				.doTest(paths)
-			else if options.boolValue('compile')
+			else if options.boolValue('compile') 
 				.doCompile(paths)
-			else if options.boolValue('highlight')
+			else if options.boolValue('highlight') 
 				.doHighlight(paths)
-			else if options.boolValue('document')
+			else if options.boolValue('document') 
 				.doDocument(paths)
-			else if options.isSpecified('document-library')
+			else if options.isSpecified('document-library') 
 				.doDocumentLibrary
-			else if options.boolValue('help')
+			else if options.boolValue('help') 
 				.doHelp
-			else if options.boolValue('version')
+			else if options.boolValue('version') 
 				.doVersion
-			else if options.boolValue('about')
+			else if options.boolValue('about') 
 				.doAbout
-			else if options.boolValue('path')
+			else if options.boolValue('path') 
 				.doPath
-			else if options.boolValue('build-standard-library')
+			else if options.boolValue('build-standard-library') 
 				.doBuildStandardLibrary
 			else if not paths.count
 				.doHelp
@@ -735,6 +749,7 @@ class CommandLine
 
 		_fixupPaths(paths)
 		_compiler = c = Compiler(.verbosity)
+		_compiler.listener = .listener
 		c.commandLineArgParser = _argParser
 		c.options = _options
 		c.willPrintSuccessMsg = willPrintSuccessMsg
@@ -802,6 +817,7 @@ class CommandLine
 		
 	def doDocument(paths as List<of String>) as Compiler
 		comp = .doCompile(paths, false, false, do(c as Compiler)=c.lastPhase inherits BindInterfacePhase)
+		_compiler.listener = .listener
 		GenerateHtmlDocVisitor(do(module)=module inherits CobraModule).gen(comp)
 		return comp
 
@@ -864,7 +880,10 @@ class CommandLine
 			print 'Not running tests due to errors above.'
 			return
 		try
-			p = c.runProcess
+			processWrapper = c.runProcess
+			if processWrapper.process is nil
+				return
+			p = processWrapper.process to !
 			if _verbosity >= 1
 				print 'Running: [p.startInfo.fileName] [p.startInfo.arguments]'
 				print .verboseLineSeparator
@@ -902,7 +921,11 @@ class CommandLine
 		# if exeArgs.count
 		#	exeFileName = exeArgs[0]
 		#   runArgs = exeArgs[1:]
-		p = c.runProcess(exeFileName, runArgs)
+		processWrapper = c.runProcess(exeFileName, runArgs)
+		p = processWrapper.process
+		if p is nil
+			return
+			
 		if _verbosity >= 1
 			print 'Running: [p.startInfo.fileName] [p.startInfo.arguments]'
 			print .verboseLineSeparator
@@ -1596,9 +1619,32 @@ class OptionValues inherits Dictionary<of String, Object>
 		else
 			return false
 
+	def boolValue(key as String,default as bool) as bool
+		if .containsKey(key)
+			return this[key] to bool
+		else
+			return default
+
+	def boolValue(key as String, default as int) as bool
+		if .containsKey(key)
+			return this[key] to bool
+		else
+			return default==1
+
 	def get(key as String) as dynamic?
 		return this[key]
 
+	def getDefault<of T>(key as String, default as T) as T?
+		if .containsKey(key)
+			#SEAN: Added this hack to allow for native-sharp-arg strings
+			result = this[key]
+			if not (result inherits T) and default is not nil and default implements IList
+				(default to IList).add(result)
+				return default
+			else
+				return result to T
+		else
+			return default
 	def getDefault(key as String, default as dynamic?) as dynamic?
 		if .containsKey(key)
 			return this[key]
@@ -1675,7 +1721,8 @@ class OptionValues inherits Dictionary<of String, Object>
 		return _uniqueIdentifier to !
 
 	def embedRunTimeSuffix as String
-		if .boolValue('embed-run-time') and not .boolValue('build-standard-library')
-			return '_ert_' + .uniqueIdentifier
-		else
-			return ''
+		return ""   #SEAN
+		#if .boolValue('embed-run-time') and not .boolValue('build-standard-library')
+		#	return '_ert_'
+		#else
+		#	return ''

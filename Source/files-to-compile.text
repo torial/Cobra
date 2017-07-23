@@ -3,6 +3,8 @@ IndentedWriter
 Misc
 SubversionUtils
 
+DebugAdaptors
+
 LibPathProcessor
 FileSpec
 CommandLine

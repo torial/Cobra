@@ -44,7 +44,7 @@ class Compiler is partial
 		if _intermediateFileNames.count == 0
 			if _verbosity >= 1, print 'No intermediate files to keep or delete.'
 		else
-			if .options.getDefault('keep-intermediate-files', 0)
+			if .options.boolValue('keep-intermediate-files', 0)
 				if _verbosity >= 1, print 'Keeping intermediate files.'
 			else
 				if _verbosity >= 1, print 'Deleting intermediate files.'

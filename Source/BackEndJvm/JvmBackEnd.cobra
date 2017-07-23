@@ -111,7 +111,7 @@ class JvmBackEnd inherits BackEnd
 		"""Resulting executable file name (pathname+extn) for compiled file(s)."""
 		return .compiler.fullJarFileName
 			
-	def setupRunProcess(baseExe as String, fullExe as String) as Process is override
+	def setupRunProcess(baseExe as String, fullExe as String) as ProcessWrapper is override
 		"""
 		Setup compiled java process to run assuming using an executable jar file.
 		All info needed should be already set in jarfile manifest - i.e main entry point 
@@ -125,7 +125,7 @@ class JvmBackEnd inherits BackEnd
 	
 		p.startInfo.arguments = args + ' '
 		#print p.startInfo.fileName, p.startInfo.arguments
-		return p		
+		return ProcessWrapper(process=p)		
 	
 	def setupRunProcessClass(baseExe as String, fullExe as String) as Process #is override
 		"""

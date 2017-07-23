@@ -116,7 +116,13 @@ class Compiler implements ITypeProvider, IWarningRecorder, IErrorRecorder, IComp
 	# caches
 	var _primitiveToITypeCache as IDictionary<of dynamic, IType>? # Key is backend type for a Type ( e.g System.Type)
 
-	cue init(verbosity as int = 0)
+	cue init
+		.init(0, nil)
+
+	cue init(verbosity as int)
+		.init(verbosity, nil)
+
+	cue init(verbosity as int, initialModules as IList<of Module>?)
 		base.init
 		Node.reset
 		_nextSerialNum += 1
@@ -142,6 +148,16 @@ class Compiler implements ITypeProvider, IWarningRecorder, IErrorRecorder, IComp
 		if .isProgramBased
 			.willPrintMessages, .willSetExitCode = true, true
 		
+		if initialModules
+			if false # TODO: not working yet
+				for mod in initialModules
+					if mod inherits AssemblyModule
+						ns = mod.topNameSpace
+						assert not ns.superNameSpace
+						ns.unifyInto(_globalNS)
+					# TODO: handle CobraModule too
+					_modules.add(mod)
+
 	def toString as String is override
 		return '[.getType.name]([_serialNum])'
 
@@ -161,6 +177,8 @@ class Compiler implements ITypeProvider, IWarningRecorder, IErrorRecorder, IComp
 	pro verbosity from var
 
 	pro willPrintMessages from var as bool
+	
+	pro listener from var as IProcessListener?
 
 	pro willSetExitCode from var as bool
 	
@@ -400,7 +418,7 @@ class Compiler implements ITypeProvider, IWarningRecorder, IErrorRecorder, IComp
 				if exc.hasSourceSite
 					.recordError(InternalError(exc.fileName, exc.lineNum, exc.message, exc))
 				else
-					.recordError(InternalError(exc.message, exc))
+					.recordError(InternalError("SoureException no Source Site: unknown source: at _compile2(params)",412,exc.message, exc))
 			else if exc inherits AssertException
 				sn as SyntaxNode?
 				if exc.this inherits SyntaxNode
@@ -410,9 +428,9 @@ class Compiler implements ITypeProvider, IWarningRecorder, IErrorRecorder, IComp
 				if sn
 					.recordError(InternalError(sn.token.fileName, sn.token.lineNum, exc.message, exc))
 				else
-					.recordError(InternalError(exc.message, exc))
+					.recordError(InternalError("Assert Exception: no SyntaxNode: unknown source: at _compile2(params)",412,exc.message, exc))
 			else
-				.recordError(InternalError(exc.message, exc))
+				.recordError(InternalError("unknownType:unknown source: at _compile2(params)",412,exc.message, exc))
 			.printMessages
 			throw StopCompilation(this)
 		success
@@ -430,6 +448,7 @@ class Compiler implements ITypeProvider, IWarningRecorder, IErrorRecorder, IComp
 		stopCompilation = params.stopCompilation
 		if params.phases.count == 0, params.phases = .makePhases
 		for phase in params.phases
+			#print phase.toString
 			if stopCompilation and stopCompilation(this), break
 			if not hasErrors or phase.willRunWithErrors
 				sw = System.Diagnostics.Stopwatch()
@@ -520,18 +539,20 @@ class Compiler implements ITypeProvider, IWarningRecorder, IErrorRecorder, IComp
 			if .verbosity, print 'Adding reference to [libName]'
 			refs.add(libName)
 			
-	def runProcess as Process
+	def runProcess as ProcessWrapper
 		return .runProcess(nil, nil)
 		
-	def runProcess(exeName as String?, argList as List<of String>?) as Process
+	def runProcess(exeName as String?, argList as List<of String>?) as ProcessWrapper
 		"""
 		Returns a new Process with startInfo.fileName and p.startInfo.arguments set appropriately
 		for the produced executable and the current options and any provided argsList.
 		"""
 		baseExeFileName = exeName ? .baseExeFileName
 		fullExeFileName = exeName ? .fullExeFileName
-		p = .backEnd.setupRunProcess(baseExeFileName, fullExeFileName)
-
+		processWrapper = .backEnd.setupRunProcess(baseExeFileName, fullExeFileName)
+		p = processWrapper.process
+		if p is nil
+			return processWrapper
 		if argList and argList.count
 			args = p.startInfo.arguments ? ''
 			if args <> '', args += ' '
@@ -540,7 +561,7 @@ class Compiler implements ITypeProvider, IWarningRecorder, IErrorRecorder, IComp
 				argList = for arg in argList get if(' ' in arg, '"[arg]"', arg)
 			args += argList.join(' ')
 			p.startInfo.arguments = args
-		return p
+		return processWrapper
 
 	##
 	## ITypeProvider

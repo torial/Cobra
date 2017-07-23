@@ -14,6 +14,9 @@ class CobraMain
 		pro compiler from var as Compiler?
 		
 		def main
+			.mainStartup(nil,nil)
+		
+		def mainStartup(listener as IProcessListener?,args as CobraArgs?)
 			# CobraCore.willCheckAll = false
 
 			t = CobraCore.tracer
@@ -23,7 +26,7 @@ class CobraMain
 			sw = System.Diagnostics.Stopwatch()
 			sw.start
 			try
-				CommandLine().run
+				CommandLine(listener).run(args)
 			finally
 				sw.stop
 				if _willTimeIt

@@ -24,6 +24,8 @@ class TestifyRunner
 
 	var _firstAttempt as bool
 
+	var _cachedTestifyModules as IList<of Module>?
+
 	var _failureLogFileName = 'r-testify-failures.text'
 
 	# two writers. status goes to console and results goes to a file.
@@ -217,7 +219,7 @@ class TestifyRunner
 	def error(msg as String)
 		_cl.error(msg)
 
-	def parseArgs(args as String, options as out OptionValues?, paths as out List<of String>?)
+	def parseArgs(args as String, verbosity as int, options as out OptionValues?, paths as out List<of String>?)
 		"""
 		This overload is primarily for -testify.
 		Arguments that come in from the system are already divided up into a list.
@@ -228,7 +230,7 @@ class TestifyRunner
 		body
 			args = args.trim
 			argsList = if('|' in args, args.split(c'|'), args.split)
-			_cl.parseArgs(argsList to passthrough, out options, out paths)
+			_cl.parseArgs(argsList to passthrough, verbosity, out options, out paths)
 
 	get cobraTestPaths as List<of String>
 		"""
@@ -243,7 +245,7 @@ class TestifyRunner
 			paths = List<of String>()
 			for subdir in Directory.getDirectories(path)
 				fileName = Path.getFileName(subdir)
-				if not fileName.isIgnoreName
+				if not fileName.isIgnoreName #.startsWith('.') and not fileName.startsWith('_')
 					paths.add(Path.getFullPath(subdir))
 			return paths
 		throw Exception('Cannot find Tests directory next door.')
@@ -255,7 +257,7 @@ class TestifyRunner
 	def testifyOptions as OptionValues
 		options as OptionValues?
 		paths as List<of String>?
-		.parseArgs(_extraTestifyArgs ? '', out options, out paths) # to get the default options
+		.parseArgs(_extraTestifyArgs ? '',.verbosity, out options, out paths) # to get the default options
 		# remember that you cannot use synonyms below. you must use the canonical name of the option
 		options['debug'] = '+'
 		options['debugging-tips'] = false
@@ -285,7 +287,9 @@ class TestifyRunner
 		Returns the number tests that passed.
 		"""
 		baseName = Path.getFileName(dirName) to !  # gets rid of "." and ".." as prefix for relative dirs
-		if baseName.isIgnoreName, return
+		if baseName.isIgnoreName #baseName.startsWith('.') or baseName.startsWith('_')
+			# examples: .svn, _svn. Also, _ is a nice way to temporarily exclude a directory if possible
+			return
 		if _useConfigPath(dirName), return		
 		_testifyDir(dirName, nil)
 		
@@ -316,7 +320,7 @@ class TestifyRunner
 				paths.sort
 				for baseName in paths
 					baseName = Utils.normalizePath(baseName)
-					if baseName.isIgnoreName, continue
+					if baseName.isIgnoreName, continue #.startsWith('_'), continue
 					if baseName.endsWith('.cobra') or baseName.endsWith('.COBRA')
 						_testifyCount += .testifyFile(baseName)
 					else if Directory.exists(baseName)
@@ -545,7 +549,7 @@ class TestifyRunner
 			if firstLineInsensitive.startsWith('#.args.')
 				i = firstLine.indexOf('.args.')
 				args as OptionValues?
-				.parseArgs(firstLine[i+'.args.'.length:], out args, out _pathList)
+				.parseArgs(firstLine[i+'.args.'.length:],.verbosity, out args, out _pathList)
 				options = .testifyOptions
 				options.combine(args to !)
 				# enable having another directive on the next line, such as .error.
@@ -606,7 +610,7 @@ class TestifyRunner
 								options as OptionValues, verbose as bool) as int 
 		"""Testify on files that have inline checks for compiler errors and warnings"""						
 		try
-			c = Compiler(compilerVerbosity, commandLineArgParser=_cl.argParser)
+			c = Compiler(compilerVerbosity, _cachedTestifyModules, commandLineArgParser=_cl.argParser)
 			c.testifyFiles(files, options, _resultsWriter to !, verbose)
 		catch StopCompilation
 			pass
@@ -665,7 +669,7 @@ class TestifyRunner
 	def _testifyHeadError(error as String, compilerVerbosity as int, files as IList<of FileSpec>,
 							options as OptionValues, verbose as bool) as int 
 		try
-			c = Compiler(compilerVerbosity, commandLineArgParser=_cl.argParser)
+			c = Compiler(compilerVerbosity, _cachedTestifyModules, commandLineArgParser=_cl.argParser)
 			c.testifyFiles(files, options, _resultsWriter to !, verbose)
 			print 'Expecting error(s): [error]'
 			print 'No error at all.'
@@ -705,7 +709,7 @@ class TestifyRunner
 							options as OptionValues, verbose as bool) as int 
 		# TODO: the following code both checks for warnings to be thrown as well as going through a list of warnings. Seems like it should just need to do one or the other.
 		try
-			c = Compiler(compilerVerbosity, commandLineArgParser=_cl.argParser)
+			c = Compiler(compilerVerbosity, _cachedTestifyModules, commandLineArgParser=_cl.argParser)
 			c.testifyFiles(files, options, _resultsWriter to !, verbose)
 		catch StopCompilation
 			if not lax
@@ -743,7 +747,7 @@ class TestifyRunner
 	def _testifyStd(compilerVerbosity as int, files as IList<of FileSpec>,
 							options as OptionValues, verbose as bool) as int		
 		try
-			c = Compiler(compilerVerbosity, commandLineArgParser=_cl.argParser)
+			c = Compiler(compilerVerbosity, _cachedTestifyModules, commandLineArgParser=_cl.argParser)
 			c.testifyFiles(files, options, _resultsWriter to !, verbose)
 		catch StopCompilation
 			.failed
@@ -779,22 +783,28 @@ class TestifyRunner
 		else
 			print 'Run:'
 			if .verbosity >= 1, print 'c.fullExeFileName = "[c.fullExeFileName]"'
-			p = c.runProcess
-			if .verbosity >= 2, print '[p.startInfo.fileName] [p.startInfo.arguments]'
-			output = p.runAndCaptureAllOutput.trim
+			processWrapper = c.runProcess
+			p = processWrapper.process
+			if p is not nil
+				if .verbosity >= 2, print '[p.startInfo.fileName] [p.startInfo.arguments]'
+				output = p.runAndCaptureAllOutput.trim
 
-			print 'Output:'
-			if output.length
-				print output
-			if p.exitCode <> 0
-				print 'Exit code = [p.exitCode]'
-				.failed
-				return 0
-			if output.toLower.indexOf('unhandled exception') <> -1
-				.failed
-				return 0
+				print 'Output:'
+				if output.length
+					print output
+				if p.exitCode <> 0
+					print 'Exit code = [p.exitCode]'
+					.failed
+					return 0
+				if output.toLower.indexOf('unhandled exception') <> -1
+					.failed
+					return 0
+			else
+				return 0 #this is just a placeholder:: SEAN
 
 		print .bar
+
+		#_cachedTestifyModules = for mod in c.modules where mod inherits AssemblyModule get mod
 
 		return 1
 
@@ -844,7 +854,6 @@ class TestifyRunner
 				if not fileInfo.name.startsWith('Cobra.')  # this happens regularly and I don't feel like seeing it
 					print 'warning: cannot delete [fileInfo] due to: [ex.message]'
 
-
 extend String
 
 	def isIgnoreName as bool
@@ -852,3 +861,4 @@ extend String
 		examples: .svn, _svn. Also, _ is a nice way to temporarily exclude a directory if possible
 		"""
 		return .startsWith('.') or .startsWith('_') or .startsWith('Cobra.Core_ert_')
+

@@ -29,6 +29,10 @@ class CurlyWriter is abstract implements IDisposable
 		_curlyToCobraLineNum = {1 : 1}
 
 	get curlyToCobraLineNum from var
+	
+	var _fName as String = ""
+	def setFileName(fileName as String) is protected
+		_fName = fileName
 
 	def hideLineNumbers
 		_hideLineNumbers += 1
@@ -107,6 +111,10 @@ class CurlyWriter is abstract implements IDisposable
 	def write(s as String?)
 		# performance sensitive code
 		if s is nil, return
+		if not s.startsWith("using ") and not s.contains("namespace") and not _fName.contains("Set.cobra")
+			#s = s.replace("Cobra.Core.","")
+			s = s.replace("global::System.Collections.Generic.","")
+			
 		start = 0
 		length = s.length
 		for i in length
@@ -151,35 +159,37 @@ class CodePoundLineWriter inherits CurlyWriter
 	var _fileName as String?
 
 	def start(fileName as String) is override
-		_sb.append('#line 1 "[fileName]"')
+		_sb.append('//#line 1 "[fileName]"') #SEAN
 		_sb.append(c'\n')
 		_fileName = fileName
+		.setFileName(fileName)
 
 	def hideLineNumbers
 		base.hideLineNumbers
-		_sb.append('#line hidden')
+		_sb.append('//#line hidden') #SEAN
 		_sb.append(c'\n')
 
 	def unhideLineNumbers
 		base.unhideLineNumbers
-		_sb.append('#line default')
+		_sb.append('//#line default') #SEAN
 		_sb.append(c'\n')
 		if _fileName
-			_sb.append('#line [_cobraLineNum] "[_fileName]"')
+			_sb.append('//#line [_cobraLineNum] "[_fileName]"') #SEAN
 			_sb.append(c'\n')
 
 	def _writeLineNum is override
 		if not _hideLineNumbers
-			_sb.append('#line ' + _cobraLineNum.toString)
+			_sb.append('//#line ' + _cobraLineNum.toString) #SEAN
 			_sb.append(c'\n')
 		
 
 class CodeCommentLineWriter inherits CurlyWriter
 
 	def start(fileName as String) is override
-		_sb.append('// #line 1 "[fileName]"')
+		_sb.append('//#line 1 "[fileName]"') #SEAN
 		_sb.append(c'\n')
+		.setFileName(fileName)
 
 	def _writeLineNum is override
-		_sb.append('// #line [_cobraLineNum]')
+		_sb.append('//#line [_cobraLineNum]') #SEAN
 		_sb.append(c'\n')

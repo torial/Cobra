@@ -503,7 +503,7 @@ class Container<of TMember> is partial
 	get javaParamRef as String
 		return .javaRef
 
-	def _computeJavaRef as String
+	get _computeJavaRef as String
 		if .parent 
 			if .parent.javaRef <> 'global' # no global (default) namespace in java
 				s = .parent.javaRef # ?'global'?
@@ -976,7 +976,7 @@ class Box is partial
 	get javaName as String is override
 		return _name.replace('<of', '<')
 
-	def _computeJavaRef as String is override
+	get _computeJavaRef as String is override
 		if _genericParams.count
 			sb = StringBuilder()
 			# generic
@@ -2558,7 +2558,7 @@ class TraceLocationStmt
 	def writeJavaDef(sw as CurlyWriter)
 		base.writeJavaDef(sw)
 		if .includeTraces
-			sw.write('CobraCoreInternal.CobraCore.Tracer.Trace([.javaSourceSite]);\n')
+			sw.write('CobraCore.Tracer.Trace([.javaSourceSite]);\n')
 
 
 class TraceAllStmt
@@ -2567,7 +2567,7 @@ class TraceAllStmt
 	def writeJavaDef(sw as CurlyWriter)
 		base.writeJavaDef(sw)
 		if .includeTraces
-			sw.write('CobraCoreInternal.CobraCore.Tracer.Trace([.javaSourceSite], "this", [_codePart.javaThis]')
+			sw.write('CobraCore.Tracer.Trace([.javaSourceSite], "this", [_codePart.javaThis]')
 			for param in _codePart.params
 				sw.write(', "[param.name]", [param.javaName]')
 			for local in _codePart.locals
@@ -2581,7 +2581,7 @@ class TraceExprsStmt
 	def writeJavaDef(sw as CurlyWriter)
 		base.writeJavaDef(sw)
 		if .includeTraces
-			sw.write('CobraCoreInternal.CobraCore.Tracer.Trace([.javaSourceSite]')
+			sw.write('CobraCore.Tracer.Trace([.javaSourceSite]')
 			sep = ', '
 			for expr in _exprs
 				sw.write('[sep][Utils.javaStringLiteralFor(expr.toCobraSource)][sep]')
@@ -2677,10 +2677,10 @@ class TryStmt
 			sw.write(')')
 			sb = StringBuilder()
 			if localSuccessVar, sb.append('[localSuccessVar] = false;\n')
-			if .compiler.hasDetailedStackTraceOption, sb.append('CobraCoreInternal.CobraImp.HandledException();\n')
+			if .compiler.hasDetailedStackTraceOption, sb.append('CobraImp.HandledException();\n')
 			if cb.varName
 				trackLocals = .compiler.willTrackLocals
-				if trackLocals, sb.append('CobraCoreInternal.CobraImp.SetLocal("[cb.varName]", ')
+				if trackLocals, sb.append('CobraImp.SetLocal("[cb.varName]", ')
 				sb.append('[cb.javaVarName] = [helperName]')
 				if trackLocals, sb.append(')')
 				sb.append(';\n')
@@ -3339,7 +3339,7 @@ class TruthExpr
 			on Treatment.AsIs
 				_expr.writeJavaDef(sw, parens)
 			on Treatment.InvokeRuntime
-				sw.write('cobra.core./*CobraCoreInternal.*/CobraImp.isTrue(')
+				sw.write('cobra.core.CobraImp.isTrue(')
 				_expr.writeJavaDef(sw, false)
 				sw.write(')')				
 			on Treatment.CompareToZero
@@ -3445,7 +3445,7 @@ class UnaryOpExpr
 			assert specs.containsKey(.token.text)
 			spec = specs[.token.text]
 			opText = Utils.javaStringLiteralFor(spec.opMethodName)
-			sw.write('cobra.core./*CobraCoreInternal.*/CobraImp.dynamicOp([opText], ')
+			sw.write('cobra.core.CobraImp.dynamicOp([opText], ')
 			_expr.writeJavaDef(sw, false)
 			sw.write(')')
 			return
@@ -3701,8 +3701,8 @@ class ToNonNilableExpr
 			#sw.write(').value')
 			sw.write(')')
 		else if .compiler.options.boolValue('include-nil-checks')
-			#sw.write('(cobra.core.CobraCore._willCheckNil ? cobra.core./*CobraCoreInternal.*/CobraImp.checkNonNil<[type.javaRef]>([.javaThis], [Utils.javaStringLiteralFor(_expr.toCobraSource)], ')
-			sw.write('(cobra.core.CobraCore._willCheckNil ? cobra.core./*CobraCoreInternal.*/CobraImp.checkNonNil([.javaThis], [Utils.javaStringLiteralFor(_expr.toCobraSource)], ')
+			#sw.write('(cobra.core.CobraCore._willCheckNil ? cobra.core.CobraImp.checkNonNil<[type.javaRef]>([.javaThis], [Utils.javaStringLiteralFor(_expr.toCobraSource)], ')
+			sw.write('(cobra.core.CobraCore._willCheckNil ? cobra.core.CobraImp.checkNonNil([.javaThis], [Utils.javaStringLiteralFor(_expr.toCobraSource)], ')
 			_expr.writeJavaDef(sw, false)
 			sw.write(', [.javaSourceSiteArgs]) :')
 			_expr.writeJavaDef(sw, false)
@@ -3746,7 +3746,7 @@ class AbstractAssignExpr is partial
 
 	def writeJavaDef(sw as CurlyWriter, parens as bool) is override
 		if _trackLocal
-			sw.write('cobra.core./*CobraCoreInternal.*/CobraImp.setLocal("[_trackName]", ')
+			sw.write('cobra.core.CobraImp.setLocal("[_trackName]", ')
 		else if parens
 			sw.write('(')
 		_writeJavaDef(sw)
@@ -3767,11 +3767,11 @@ class AssignExpr is partial
 
 		# TODO:
 		# if trackLocal:
-		#	out.write('CobraCoreInternal.CobraImp.SetLocal("%s", ' % .left.name)
+		#	out.write('CobraImp.SetLocal("%s", ' % .left.name)
 		if _left inherits IndexExpr
 			if _left.target.type.isDynamic
 				# assigning to an indexer of a dynamically typed target requires special code gen
-				sw.write('cobra.core./*CobraCoreInternal.*/CobraImp.setIndexerValue(')
+				sw.write('cobra.core.CobraImp.setIndexerValue(')
 				_left.target.writeJavaDef(sw, false)
 				sw.write(', ')
 				_right.writeJavaDef(sw, false)
@@ -3798,7 +3798,7 @@ class AssignExpr is partial
 			if _left inherits DotExpr
 				if _left.left.type.isDynamic
 					assert _left.right inherits MemberExpr
-					sw.write('cobra.core./*CobraCoreInternal.*/CobraImp.setPropertyValue(')
+					sw.write('cobra.core.CobraImp.setPropertyValue(')
 					_left.left.writeJavaDef(sw, false)
 					sw.write(', ')
 					sw.write(Utils.javaStringLiteralFor((_left.right to MemberExpr).name))
@@ -3830,7 +3830,7 @@ class NumericPromoExpr is partial
 		assert specs.containsKey(.token.text)
 		spec = specs[.token.text]
 		opText = Utils.javaStringLiteralFor(spec.opMethodName)
-		sw.write('cobra.core./*CobraCoreInternal.*/CobraImp.DynamicOp([opText], ')
+		sw.write('cobra.core.CobraImp.DynamicOp([opText], ')
 		_left.writeJavaDef(sw)
 		sw.write(', ')
 		_right.writeJavaDef(sw)
@@ -3851,7 +3851,7 @@ class AugAssignMathExpr is partial
 		_left.writeJavaDef(sw, false)
 		sw.write(' = ')
 		sw.write('(' + _left.type.javaRef + ')')
-		sw.write('cobra.core./*CobraCoreInternal.*/CobraImp.concated(')
+		sw.write('cobra.core.CobraImp.concated(')
 		_left.writeJavaDef(sw, false)
 		sw.write(', ')
 		_right.writeJavaDef(sw, false)
@@ -3864,7 +3864,7 @@ class AugAssignMathExpr is partial
 		assert specs.containsKey(.token.text)
 		spec = specs[.token.text]
 		opText = Utils.javaStringLiteralFor(spec.opMethodName)
-		sw.write('cobra.core./*CobraCoreInternal.*/CobraImp.dynamicOp([opText], ')
+		sw.write('cobra.core.CobraImp.dynamicOp([opText], ')
 		_left.writeJavaDef(sw)  # TODO: add , false
 		sw.write(', ')
 		_right.writeJavaDef(sw)  # TODO: add , false
@@ -3881,7 +3881,7 @@ class AugAssignMathExpr is partial
 			on 'STAR_EQUALS'
 				op = '*='
 			on 'STARSTAR_EQUALS'
-				#op = 'CobraCoreInternal.CobraImp.PowerToEquals('
+				#op = 'CobraImp.PowerToEquals('
 				op = 'java.lang.Math.pow('
 			on 'SLASH_EQUALS'
 				op = '/='  # TODO: finish this
@@ -3897,7 +3897,7 @@ class AugAssignMathExpr is partial
 			sw.write(op)
 			_right.writeJavaDef(sw)
 		else
-			sw.write(op)  # ex: 'CobraCoreInternal.CobraImp.Foo('
+			sw.write(op)  # ex: 'CobraImp.Foo('
 			_left.writeJavaDef(sw)
 			sw.write(sep)
 			_right.writeJavaDef(sw)
@@ -3915,7 +3915,7 @@ class AugAssignBitwiseExpr
 			assert specs.containsKey(.token.text)
 			spec = specs[.token.text]
 			opText = Utils.javaStringLiteralFor(spec.opMethodName)
-			sw.write('cobra.core./*CobraCoreInternal.*/CobraImp.dynamicOp([opText], ')
+			sw.write('cobra.core.CobraImp.dynamicOp([opText], ')
 			_left.writeJavaDef(sw)  # TODO: add , false
 			sw.write(', ')
 			_right.writeJavaDef(sw)  # TODO: add , false
@@ -4014,7 +4014,7 @@ class BinaryMathExpr is partial
 
 	def _writeJavaDefConcated(sw as CurlyWriter)
 		sw.write('(' + _left.type.javaRef + ')')
-		sw.write('cobra.core./*CobraCoreInternal.*/CobraImp.concated(')
+		sw.write('cobra.core.CobraImp.concated(')
 		_left.writeJavaDef(sw, false)
 		sw.write(', ')
 		_right.writeJavaDef(sw, false)
@@ -4035,7 +4035,7 @@ class BinaryMathExpr is partial
 			on 'STAR'
 				op = '*'
 			on 'STARSTAR'
-				#op = 'CobraCoreInternal.CobraImp.PowerTo('
+				#op = 'CobraImp.PowerTo('
 				op = 'System.Math.Pow('
 				if _left.isKindOf(intType) and _right.isKindOf(intType)
 					pre = '(' + .compiler.intType.javaRef + ')'
@@ -4066,7 +4066,7 @@ class BinaryMathExpr is partial
 			sw.write(op)
 			_right.writeJavaDef(sw)
 		else
-			sw.write(op)  # ex: 'CobraCoreInternal.CobraImp.Foo('
+			sw.write(op)  # ex: 'CobraImp.Foo('
 			_left.writeJavaDef(sw)
 			sw.write(sep)
 			_right.writeJavaDef(sw)
@@ -4135,10 +4135,10 @@ class CompareExpr
 				#op = if(op=='IS', ' instanceof ', '! instanceof ')
 			else
 				# non-trivial situation.. fall back to runtime support
-				op = if(op=='IS', 'cobra.core./*CobraCoreInternal.*/CobraImp.is(', 'cobra.core./*CobraCoreInternal.*/CobraImp.isNot(')
+				op = if(op=='IS', 'cobra.core.CobraImp.is(', 'cobra.core.CobraImp.isNot(')
 		else
 			if left.type.isDynamic or right.type.isDynamic
-				sw.write('cobra.core./*CobraCoreInternal.*/CobraImp.dynamicCompare(')
+				sw.write('cobra.core.CobraImp.dynamicCompare(')
 				left.writeJavaDef(sw, false)
 				sw.write(', ')
 				right.writeJavaDef(sw, false)
@@ -4198,7 +4198,7 @@ class ChainedCompareExpr is partial
 		if parens, sw.write(')')
 	
 	def writeJavaDef(sw as CurlyWriter) is override
-		sw.write('cobra.core./*CobraCoreInternal.*/CobraCore.chainedComparison(')
+		sw.write('cobra.core.CobraCore.chainedComparison(')
 		_items[0].writeJavaDef(sw)
 		itemIndex = 1
 		for operation in _operations
@@ -4228,7 +4228,7 @@ class DotExpr
 			if _dotRightExpr.definition
 				sw.write('(' + _dotRightExpr.type.javaRef + ')')
 			if _right inherits MemberExpr
-				sw.write('cobra.core./*CobraCoreInternal.*/CobraImp.getPropertyValue(')
+				sw.write('cobra.core.CobraImp.getPropertyValue(')
 				_left.writeJavaDef(sw, not _left inherits DotExpr)
 				sw.write(', ')
 				sw.write(Utils.javaStringLiteralFor(_right.name)) # was .capitalized
@@ -4338,7 +4338,7 @@ class InExpr is partial
 
 				# cobra: left in right
 				# java: cobra.core.CobraImp.in(left, delegate() { return right; })
-				sw.write('cobra.core/*CobraCoreInternal*/.CobraImp.inWithNullCheck(')
+				sw.write('cobra.core.CobraImp.inWithNullCheck(')
 				.left.writeJavaDef(sw, false)
 				sw.write(', delegate([.left.type.javaRef] __lh_value_[.serialNum]) { return ')
 				if .containsExpr
@@ -4349,7 +4349,7 @@ class InExpr is partial
 					if v, sw.write('/* C */')
 				else
 					# No .containsExpr means we use CobraImp.In(a, b) for the delegate
-					sw.write('cobra.core/*CobraCoreInternal*/.CobraImp.in(__lh_value_[.serialNum], ')
+					sw.write('cobra.core.CobraImp.in(__lh_value_[.serialNum], ')
 					.right.writeJavaDef(sw, false)
 					if v, sw.write('/* D */')
 				sw.write(' })')
@@ -4362,7 +4362,7 @@ class InExpr is partial
 			.containsExpr.writeJavaDef(sw, parens)
 			if v, sw.write('/* F */')
 		else
-			sw.write('cobra.core/*CobraCoreInternal*/.CobraImp.in(')
+			sw.write('cobra.core.CobraImp.in(')
 			.left.writeJavaDef(sw, false)
 			sw.write(',')
 			.right.writeJavaDef(sw, false)
@@ -4409,7 +4409,7 @@ class ToExpr is partial
 		else, return false  # the user is already casting, so go with their cast
 #/
 	def _writeJavaDef(sw as CurlyWriter) is override
-		rightType = _potentialTypeExpr.potentialType to !   # it's not nil or _bindImp would have thrown an error
+		rightType = _potentialTypeExpr.potentialType to !   # its not nil or _bindImp would have thrown an error
 		if rightType is .compiler.passThroughType
 			_left.writeJavaDef(sw)
 			return
@@ -4417,7 +4417,7 @@ class ToExpr is partial
 		_right.writeJavaDef(sw, false)
 		sw.write(')')
 		if not rightType inherits NilableType and rightType.isReference and .compiler.options.boolValue('include-nil-checks')
-			sw.write('cobra.core./*CobraCoreInternal.*/CobraImp.checkNonNil([.javaThis], [Utils.javaStringLiteralFor(_left.toCobraSource)], ')
+			sw.write('cobra.core.CobraImp.checkNonNil([.javaThis], [Utils.javaStringLiteralFor(_left.toCobraSource)], ')
 			_left.writeJavaDef(sw, false)
 			sw.write(', [.javaSourceSiteArgs])')
 		else
@@ -4431,7 +4431,7 @@ class ToQExpr
 		# x to? int     --> ((x is int || x is int?) ? (int?)x : (int?)null)
 		# x to? int?    --> ((x is int || x is int?) ? (int?)x : (int?)null)
 		# ^ but this would cause multiple evaluation of x, so...
-		# x to? int?	--> (int?)CobraCoreInternal.CobraImp.ToOrNil(x)
+		# x to? int?	--> (int?)CobraImp.ToOrNil(x)
 
 		# x to? string  --> (x as String)
 		# x to? string? --> (x as String)
@@ -4444,7 +4444,7 @@ class ToQExpr
 		#	.left.writeJavaDef(sw)
 		#	sw.write(') as [typeJavaRef]')
 		#else
-		#	sw.write('[typeJavaRef])CobraCoreInternal.CobraImp.ToOrNil<[typeJavaRef]>(')
+		#	sw.write('[typeJavaRef])CobraImp.ToOrNil<[typeJavaRef]>(')
 		#	.left.writeJavaDef(sw)
 		sw.write('[typeJavaRef])cobra.core.CobraImp.toOrNil<[typeJavaRef]>(')
 		.left.writeJavaDef(sw)

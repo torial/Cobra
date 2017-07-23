@@ -106,20 +106,20 @@ class InstallFromWorkspace
 	var libs = [
 		{
 			'name': 'Cobra.Core',
-			'flags': '-build-standard-library',
+			'flags': '-build-standard-library -kif',
 			'files': 'Cobra.Core/AssemblyAttrs.cobra',
 			'requiresGacVerification': true,
 		},
 		{
 			'name': 'Cobra.Compiler',
-			'flags': '-c -t:lib -embed-version -ert:yes -namespace:Cobra.Compiler -files:files-to-compile.text',
+			'flags': '-c -t:lib -kif -embed-version -ert:yes -namespace:Cobra.Compiler -files:files-to-compile.text',
 #			'files': 'Cobra.Core/Compiler.Attributes.cobra',  # to-do
 			'files': 'cobra.cobra',
 			'requiresGacVerification': true,
 		},
 		{
 			'name': 'Cobra.MSBuild',
-			'flags': '-c -t:lib -embed-version',
+			'flags': '-c -t:lib -embed-version -kif',
 			'files': 'Cobra.MSBuild/CobraCompiler.cobra',
 			'requiresGacVerification': false,
 		}
@@ -280,7 +280,7 @@ class InstallFromWorkspace
 	def moveFile(source as String, target as String)
 		# File.move does not overwrite a file if it already exists
 		File.copy(source, target, true)
-		File.delete(source)
+		#File.delete(source)
 
 	def _unReadOnly(dirName as String)
 		_unReadOnly(DirectoryInfo(dirName))
@@ -579,12 +579,11 @@ class InstallFromWorkspace
 				# Windows 8.1 SDK
 				r'\Program Files (x86)\Microsoft SDKs\Windows\v8.1A\bin\NETFX 4.5.1 Tools\x64',
 				r'\Program Files (x86)\Microsoft SDKs\Windows\v8.1A\bin\NETFX 4.5.1 Tools',
-
+				r'\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.6 Tools',
+				r'\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.6.1 Tools',
+				r'\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.6.2 Tools',
 				r'Microsoft SDKs\Windows\v8.0A\bin\NETFX 4.0 Tools',  # VS 2012
 				r'\Program Files (x86)\Microsoft SDKs\Windows\v8.0A\bin\NETFX 4.0 Tools', # VS2012
-				r'Microsoft SDKs\Windows\v7.1\Bin',    # VS 2010 
-				r'Microsoft SDKs\Windows\v7.1\Bin\NETFX 4.0 Tools\x64', # VS2010
-				r'Microsoft SDKs\Windows\v7.1\Bin\NETFX 4.0 Tools', # VS2010
 				r'Microsoft SDKs\Windows\v6.0A\bin',  # VS 2008
 				r'Microsoft.NET\SDK\v2.0\bin',        # VS 2005 / SDK .NET 2.0
 				r'Microsoft Visual Studio 8\SDK\v2.0\Bin',
@@ -701,7 +700,7 @@ class InstallFromWorkspace
 	def buildCobraCompiler
 		.startStage('Build new Cobra compiler')
 		args = '-compile [.compileFlags] -ert:yes'
-		args += ' cobra.cobra -files:files-to-compile.text'
+		args += ' cobra.cobra -kif -files:files-to-compile.text'
 		if _platformArg, args += ' -sharp-args:\"[_platformArg]\"'
 		.runSnapshotCobra(args)
 		if not File.exists('cobra.exe'), .error('No cobra.exe file was produced.')
@@ -722,7 +721,7 @@ class InstallFromWorkspace
 				_baseVersion = reMatch.value
 			else
 				.error('Could not extract base version number.')
-			_baseVersion += '-post'
+			# _baseVersion += '-post'
 		# check for an informal release
 		parent = Path.getFullPath('..')
 		if File.exists('[parent][.slash]InformalRelease.text')
@@ -750,7 +749,7 @@ class InstallFromWorkspace
 		will be installed to the GAC along with the dll. This is required for the -d compiler option.
 		"""
 		.startStage('Build [name] library')
-		args = '[flags] -debug [.compileFlags] -out:[name].dll'
+		args = '[flags] -kif -debug [.compileFlags] -out:[name].dll'
 		args += ' -key-file:Cobra.Core[.slash]Cobra.Core.snk '
 		args += ' [files]'
 		if _platformArg, args += ' -sharp-args:\"[_platformArg]\"'
@@ -863,11 +862,11 @@ class InstallFromWorkspace
 			if File.exists('hello.exe'), File.delete('hello.exe')  # fresh start
 			File.copy('Misc[.slash]hello.cobra', 'hello.cobra', true)
 			hello = 'hello.cobra'
-			output = .runSourceCobra('-ert:no [hello]')
+			output = .runSourceCobra('-kif -ert:no [hello]')
 			if not output.startsWith('Hello'), .error(msg)
 			output = .runSourceCobra('[hello]')
 			if not output.startsWith('Hello'), .error(msg)
-		output = .runSourceCobra('-ert:yes [hello]')
+		output = .runSourceCobra('-kif -ert:yes [hello]')
 		if not output.startsWith('Hello'), .error(msg)
 
 	def copyFilesToInstallDirectory
@@ -979,7 +978,7 @@ class InstallFromWorkspace
 		output = .runCommand(_cobraCommandPath to !, '-about', true)
 		if not output.startsWith('The Cobra Programming Language')
 			.error('Cannot run the installed Cobra with -about')
-		output = .runCommand(_cobraCommandPath to !, '-ert:yes Misc[slash]hello.cobra', true)
+		output = .runCommand(_cobraCommandPath to !, '-kif -ert:yes Misc[slash]hello.cobra', true)
 		if not output.startsWith('Hello')
 			.error('Cannot run the installed Cobra on "hello.cobra"')
 		
@@ -999,12 +998,13 @@ class InstallFromWorkspace
 		# By removing cobra.exe and friends from the workspace,
 		# we minimize the chances that the user runs the local Cobra compiler
 		# instead of the installed one.
-		fileNames = ['cobra.exe']
-		for lib in .libs, fileNames.add(lib['name'] + '.dll')
-		for fileName in fileNames
-			for ext in ['', '.mdb', '.pdb']
-				try, File.delete(fileName+ext)
-				catch Exception, pass
+		return
+		#fileNames = ['cobra.exe']
+		#for lib in .libs, fileNames.add(lib['name'] + '.dll')
+		#for fileName in fileNames
+		#	for ext in ['', '.mdb', '.pdb']
+		#		try, File.delete(fileName+ext)
+		#		catch Exception, pass
 
 	def installInPath
 		.startStage('Install "cobra" into a system path directory')
@@ -1037,8 +1037,6 @@ class InstallFromWorkspace
 					.copyCobraCommandTo(commandPath, true)
 		else if '/usr/local/bin' in paths
 			.copyCobraCommandTo('/usr/local/bin/[commandName]', false)
-		else if '/usr/bin' in paths
-			.copyCobraCommandTo('/usr/bin/[commandName]', false)
 		else
 			# TODO: on unix, create a symlink in /usr/local/bin or /usr/bin if they exist and are in the path
 			print 'The Cobra compiler is not in your PATH. To remedy you can:'

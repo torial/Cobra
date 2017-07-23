@@ -17,7 +17,47 @@ class ClrBackEnd inherits BackEnd
 		# using .NET 4.0 compiler
 		# if not compiler.options['native-compiler'].length or compiler.options['native-compiler'] contains '4'
 		_additionalRunTimeLibs = ['System.Core.dll']  # on .NET 4.0
-	
+/#	
+		_tagToTypeName = { 
+			'Object'	: 		'object', #'System.Object',
+			'Type'	 	: 		'Type', #'System.Type',
+			'String'	: 		'string', #'System.String',
+			'Exception' : 	'Exception', #	'System.Exception',
+			'Delegate'  : 	'delegate', #	'System.Delegate',
+			'Attribute' : 	'Attribute',#	'System.Attribute',
+			'ICloneable': 	'ICloneable',#	'System.ICloneable',
+			'IEnumerable': 	'IEnumerable', #	'System.Collections.IEnumerable',
+			'IEnumerator': 		'System.Collections.IEnumerator',
+			'IEnumerable<of>' : 'IEnumerable<of>', # 'System.Collections.Generic.IEnumerable<of>',
+			'IEnumerator<of>' : 'IEnumerator<of>', # 'System.Collections.Generic.IEnumerator<of>',
+			'IDictionaryEnumerator' : 'System.Collections.IDictionaryEnumerator',
+			'ICollection': 		'System.Collections.ICollection',
+			'ICollection<of>': 'ICollection<of>', #	'System.Collections.Generic.ICollection<of>',
+			'IList'	:  			'System.Collections.IList',
+			'IList<of>'	:  	 'IList<of>', #	'System.Collections.Generic.IList<of>',
+			'List<of>':   	'List<of>', #	'System.Collections.Generic.List<of>',
+			'IDictionary':   	'System.Collections.IDictionary',
+			'IDictionary<of,>': 'IDictionary<of,>', # 'System.Collections.Generic.IDictionary<of,>',
+			'Dictionary<of,>' : 'Dictionary<of,>', #'System.Collections.Generic.Dictionary<of,>',
+			'KeyValuePair<of,>':'KeyValuePair<of,>', #'System.Collections.Generic.KeyValuePair<of,>',
+			'Set<of>': 			'Set<of>', #'Cobra.Core.Set<of>',
+
+			'bool'	: 'bool', # 'System.Boolean',
+			'char'  : 'char', #  'System.Char',
+			'decimal':  'decimal', #'System.Decimal',
+			'single': 'float', #'System.Single',		
+			'double': 'double', #'System.Double',		
+			'sbyte'	: 'sbyte', # 'System.SByte',		
+			'int16'	: 'short', # 'System.Int16',		
+			'int32'	:  'int', #'System.Int32',		
+			'int64'	: 'long', #'System.Int64',		
+			'byte'	: 'byte', # 'System.Byte',		
+			'uint16': 'ushort', # 'System.UInt16',		
+			'uint32': 'uint', #'System.UInt32',		
+			'uint64':  'ulong', #'System.UInt64',		
+			}
+#/
+/##/
 		_tagToTypeName = { 
 			'Object'	: 		'System.Object',
 			'Type'	 	: 		'System.Type',
@@ -56,6 +96,7 @@ class ClrBackEnd inherits BackEnd
 			'uint32': 'System.UInt32',		
 			'uint64': 'System.UInt64',		
 			}
+			/##/
 
 	def makePhases(phases as IList<of Phase>) is override
 		phases.add(GenerateSharpCodePhase(.compiler))
@@ -98,7 +139,7 @@ class ClrBackEnd inherits BackEnd
 		"""Resulting full executable file name (pathname+extn) for compiled file(s)."""
 		return .compiler.clrFullExeFileName
 			
-	def setupRunProcess(baseExe as String, fullExe as String) as Process is override
+	def setupRunProcess(baseExe as String, fullExe as String) as ProcessWrapper is override
 		p = Process()
 		branch .compiler.platform
 			on PlatformEnum.Microsoft
@@ -113,7 +154,7 @@ class ClrBackEnd inherits BackEnd
 				p.startInfo.arguments = args + ' '
 			else
 				throw FallThroughException(.compiler.platform)
-		return p		
+		return ProcessWrapper(process=p		)
 		
 	def setDefaultUseDirectives(ns as NameSpace) is override
 		useToken = Token('(implicit)', 1, 1, 1, 'USE', 'use', nil) 		# TODO: make an "implicit" token

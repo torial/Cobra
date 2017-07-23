@@ -445,7 +445,7 @@ class Compiler is partial
 
 		# the next statement can be problematic in that you have to add new DecimalTools methods in Snapshot just so the compiler can see them
 		# ultimately, extensions of primitive types should be supported
-		_installClrNativeMethodsFrom('CobraCoreInternal', ClrNativeType(DecimalTools.getType), nativeType, box, meths)
+		_installClrNativeMethodsFrom('CobraCore', ClrNativeType(DecimalTools.getType), nativeType, box, meths)
 
 		# _printMethods(meths, box)
 	
@@ -691,7 +691,7 @@ class Box is partial
 			lastDecl.parentBox = this
 			
 	def _scanClrFields
-		for fieldInfo in _clrType.getFields(BindingFlags(Instance, Static, DeclaredOnly, Public, NonPublic))
+		for fieldInfo in _clrType.getFields(BindingFlags(Instance, Static, DeclaredOnly, Public))
 			if fieldInfo.declaringType is not _clrType, continue
 			if fieldInfo.isAssembly, continue
 			if fieldInfo.isPrivate, continue

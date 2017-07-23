@@ -55,10 +55,10 @@ class ObjcBackEnd inherits BackEnd
 		"""Resulting full executable file name (pathname+extn) for compiled file(s)."""
 		return .compiler.clrFullExeFileName
 
-	def setupRunProcess(baseExe as String, fullExe as String) as Process is override
+	def setupRunProcess(baseExe as String, fullExe as String) as ProcessWrapper is override
 		p = Process()
 		p.startInfo.fileName = fullExe
-		return p
+		return ProcessWrapper(process= p)
 		
 	def setDefaultUseDirectives(ns as NameSpace) is override
 		useToken = Token('(implicit)', 1, 1, 1, 'USE', 'use', nil)

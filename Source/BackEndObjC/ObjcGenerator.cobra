@@ -270,7 +270,7 @@ class CobraModule is partial
 		# TODO: list op sys
 		sw.write('\n')
 
-		# to-do: axe or change: sw.write('using CobraCoreInternal = Cobra.Core[.compiler.embedRunTimeSuffix];\n')
+		# sw.write('using Cobra.Core[.compiler.embedRunTimeSuffix];\n')
 		
 		writeObjc(sw)
 		(.compiler to Compiler).createObjcFile(.objcFileName, sw.output)
@@ -318,7 +318,7 @@ class Container<of TMember> is partial
 	get objcParamRef as String
 		return .objcRef
 
-	def _computeObjcRef as String
+	get _computeObjcRef as String
 		if .parent
 			s = .parent.objcRef
 			if s.length and not s.endsWith('::')  # Obj-C has weird "global::" name  # to-do: not an obj-c thing
@@ -589,7 +589,7 @@ class PassThroughType is partial
 class StreamType is partial
 
 	get objcInit as String is override
-		return 'new CobraCoreInternal.EmptyStream<[.theWrappedType.objcRef]>()'  # to-do
+		return 'new EmptyStream<[.theWrappedType.objcRef]>()'  # to-do
 
 	get objcRef as String is override
 		assert .didBindInh and .didBindInt
@@ -682,7 +682,7 @@ class Box is partial
 	get objcName as String is override
 		return _name.replace('<of', '<')
 
-	def _computeObjcRef as String is override
+	get _computeObjcRef as String is override
 		if _genericParams.count
 			sb = StringBuilder()
 			# generic

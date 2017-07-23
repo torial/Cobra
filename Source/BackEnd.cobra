@@ -50,7 +50,8 @@ class BackEnd is abstract
 		"""Turn qualified type name or a type tag into backEnd className."""
 		if qualifiedNameOrTag.contains('.')			
 			qualifiedName = qualifiedNameOrTag
-		else	
+		else
+			#print qualifiedNameOrTag
 			qualifiedName = .tagToTypeName[qualifiedNameOrTag]  # type tag to backend qualifiedName
 		return qualifiedName
 		
@@ -85,7 +86,7 @@ class BackEnd is abstract
 		for it, otherwise return nil.
 		"""
 	
-	def setupRunProcess(baseExe as String, fullExe as String) as Process is abstract
+	def setupRunProcess(baseExe as String, fullExe as String) as ProcessWrapper is abstract
 		"""
 		Create and initialise the process to run the compiled program post compilation
 		setup varies on the backend (.Clr/Jvm) and platform.
@@ -228,11 +229,11 @@ class FakeBackEnd inherits BackEnd
 	def genNativeModule(file as FileSpec, verbosity as int) as Module?  is override
 		return nil
 	
-	def setupRunProcess(baseExe as String, fullExe as String) as Process  is override
+	def setupRunProcess(baseExe as String, fullExe as String) as ProcessWrapper  is override
 		p = Process()
 		p.startInfo.fileName = 'echo' 
 		p.startInfo.arguments = 'basic BackEnd process - [fullExe]'
-		return p		
+		return ProcessWrapper(process= p)		
 	
 	def setDefaultUseDirectives(ns as NameSpace)  is override
 		pass

@@ -1,0 +1,195 @@
+use System.Diagnostics
+use System.ComponentModel
+use System.Windows.Forms
+
+
+interface IProcessListener
+	pro corProcess as Object?
+	def onBreakPoint(args as CorBreakpointEventArgs )
+
+class ProcessWrapper
+	pro process from var as Process?  
+	pro corProcess from var as Object?  
+
+	
+class CorBreakpointEventArgs inherits EventArgs
+	pro continue from var as bool
+	
+#Some of the Actions are not compatible
+enum ActionType
+	Run=0, #This is the default
+	Testify,
+	Test,
+	Compile,
+	Highlight,
+	Document,
+	DocumentLibrary,
+	Help,
+	Version,
+	About,
+	Path,
+	BuildStandardLibrary
+
+enum Platform
+	clr=0,
+	portable, #any,objc types removed due to compile errors
+	jvm
+
+enum Contract
+	none,
+	methods
+
+enum NativeCompiler
+	auto,
+	provider
+
+enum DebugOptions
+	full,
+	none, #was off, but got compile errors
+	pdbonly
+
+class CobraArgs
+	#region Output Properties
+	pro verbosity from var as int 
+		has Category("Output")
+	pro outputHtml from var as bool
+		has Category("Output"), DisplayName("Should Output Html")
+	pro color from var as bool 
+		has Category("Output")
+	#endregion
+
+	#region Quality Flags
+	pro contract from var as Contract 
+		has Category("Quality Flags")
+
+	pro turbo from var as bool
+		has Category("Quality Flags"),Description("Disables tests, nil checks, contracts")
+	pro includeTests from var as bool
+		has Category("Quality Flags"), DisplayName("Include Tests")
+	pro includeAsserts from var as bool
+		has Category("Quality Flags"), DisplayName("Include Asserts")
+	pro includeTraces from var as bool
+		has Category("Quality Flags"), DisplayName("Include Traces")
+	pro includeNilChecks from var as bool
+		has Category("Quality Flags"), DisplayName("Include Nil Checks")
+	pro correctSource from var as bool
+		has Category("Quality Flags"), DisplayName("Correct Source")
+	#endregion
+
+	#region Compilation
+	pro action from var as ActionType 
+		has Category("Compilation")
+	pro debug from var as DebugOptions 
+		has Category("Compilation")
+	pro platform from var as Platform 
+		has Category("Compilation")
+	pro nativeCompiler from var as NativeCompiler 
+		has Category("Compilation"), DisplayName("Native Compiler")
+	pro compileIfNeeded from var as bool 
+		has Category("Compilation"), DisplayName("Compile If Needed")
+	pro delaySign from var as bool 
+		has Category("Compilation"), DisplayName("Delay Sign")
+	pro optimize from var as bool 
+		has Category("Compilation")
+	pro copyCore from var as bool 
+		has Category("Compilation"), DisplayName("Copy Core")
+	pro embedRunTime from var as bool 
+		has Category("Compilation"), DisplayName("Embed Run Time")
+	pro willRunExe from var as bool 
+		has Category("Compilation"), DisplayName("Will Run EXE")
+
+	#endregion
+
+
+	pro detailedStackTrace from var as bool 
+		has Category("Debugging"), DisplayName("Detailed Stack Trace")
+	pro exceptionReport from var as bool 
+		has Category("Debugging"), DisplayName("Exception Report")
+	pro showSharedData from var as bool 
+		has Category("Debugging"), DisplayName("Show Shared Data")
+	pro timeIt from var as bool 
+		has Category("Debugging"), DisplayName("Time It")
+	pro revealInternalExceptions from var as bool 
+		has Category("Debugging"), DisplayName("Reveal Internal Exceptions")
+	pro debuggingTips from var as bool 
+		has Category("Debugging"), DisplayName("Debugging Tips")
+
+	pro paths from var as List<of String> 
+		has Browsable(false)
+
+	cue init
+		base.init
+		.paths = List<of String>()
+
+	#Acts as an adapter to the built-in Command Line Args
+	def setOptions(options as OptionValues )
+		options.set("back-end", .platform.toString)
+		options.set("contracts", .contract.toString)
+		options.set("native-compiler", .nativeCompiler.toString)
+		options.set("debug", .debug.toString)
+
+		#THESE ARE NECESSARY FOR DEBUGGING
+		options.set("native-compiler-arg", "/platform:x86")
+		
+		if .outputHtml 
+			options.set("output-html", true)
+		if .turbo 
+			options.set("turbo", true)
+		if .willRunExe
+			options.set("willRunExe", true)
+		if .includeTests 
+			options.set("include-tests", true)
+		if .includeAsserts 
+			options.set("include-asserts", true)
+		if .includeTraces
+			options.set("include-traces", true)
+		if .detailedStackTrace
+			options.set("detailed-stack-trace", true)
+		if .exceptionReport 
+			options.set("exception-report", true)
+		if .showSharedData
+			options.set("show-shared-data", true)
+		if .timeIt 
+			options.set("timeit", true)
+		if .compileIfNeeded
+			options.set("compile-if-needed", true)
+		if .revealInternalExceptions
+			options.set("reveal-internal-exceptions", true)
+		if .color
+			options.set("color", true)
+		if .delaySign
+			options.set("delay-sign", true)
+		if .optimize 
+			options.set("optimize", true)
+		if .copyCore
+			options.set("copy-core", true)
+		if .debuggingTips
+			options.set("debugging-tips", true)
+		if .embedRunTime 
+			options.set("embed-run-time", true)
+
+		branch .action
+			on ActionType.Testify
+				options.set('testify',true)
+			on ActionType.Run
+				options.set('run',true) 
+			on ActionType.Test
+				options.set('test',true) 
+			on ActionType.Compile
+				options.set('compile',true) 
+			on ActionType.Highlight
+				options.set('highlight',true) 
+			on ActionType.Document
+				options.set('document',true) 
+			on ActionType.DocumentLibrary
+				options.set('document-library',true) 
+			on ActionType.Help
+				options.set('help',true)
+			on ActionType.Version
+				options.set('version',true)
+			on ActionType.About
+				options.set('about',true) 
+			on ActionType.Path
+				options.set('path',true) 
+			on ActionType.BuildStandardLibrary
+				options.set('build-standard-library',true) 

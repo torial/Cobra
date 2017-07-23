@@ -9,10 +9,12 @@ class ClrNativeType inherits NativeType
 	"""
 		
 	var _type as System.Type
+	var _customAttributesCache as Dictionary<of Type,IList<of dynamic>>
 	
 	cue init(type as System.Type)
 		base.init
 		_type = type
+		_customAttributesCache = Dictionary<of Type,IList<of dynamic>>()
 
 	def equals(other as Object?) as bool is override
 		if other is this
@@ -45,8 +47,14 @@ class ClrNativeType inherits NativeType
 	get baseType as NativeType? is override
 		return if(_type.baseType, ClrNativeType(_type.baseType), nil)
 
+	#7/22/17: Sean - used a cache to improve performance
 	def customAttributes as IList<of dynamic> is override
-		return .clrType.getCustomAttributes(true) to IList<of dynamic>
+		result as IList<of dynamic>? = nil
+		if _customAttributesCache.tryGetValue(.clrType,out result)
+			return result to !
+		result = .clrType.getCustomAttributes(true) to IList<of dynamic>?
+		_customAttributesCache[.clrType] = result to !
+		return  result to !
 
 	get isSystemObjectClass as bool is override
 		return /#_type and #/ .fullName == 'System.Object'
