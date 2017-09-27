@@ -31,7 +31,7 @@ class BindRunTimeLibraryPhase inherits Phase
 			print '            return "[DateTime.now.toString("yyyy-MM-dd")]"'
 			print '        get subversionRevision as String is shared'
 			print '            return "[_subversionRevision]"'
-		.options.addExtraSource(sw.toString)
+		#.options.addExtraSource(sw.toString) SEAN COMMENTED OUT
 
 		# Add the Cobra.Core run-time file paths to the compiler's pathsToCompile
 		c = .compiler
@@ -45,9 +45,11 @@ class BindRunTimeLibraryPhase inherits Phase
 		
 		if Directory.exists(newDir), Directory.delete(newDir, true)
 		Utils.copyDirectory(cobraCoreDir, newDir)
+		File.writeAllText(Path.combine(newDir,'CompileTimeInfo.cobra'),sw.toString) #SEAN ADDED
 		cobraCoreDir = newDir
 		
 		filesPath = Path.combine(cobraCoreDir, 'files.text')
+		File.appendAllText(filesPath,'CompileTimeInfo.cobra')
 		runTimePaths = c.commandLineArgParser.readFilesFile(filesPath)
 		runTimePaths.reverse
 		

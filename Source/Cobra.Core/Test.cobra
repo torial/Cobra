@@ -81,9 +81,10 @@ TODO
 namespace Cobra.Core.Test
 
 	use Cobra.Core
+	use Cobra.Core.Test  #SEAN: THIS IS A HACK TO GET AROUND MY NAMESPACE CLEANUP LOGIC
 	use System.Reflection
 
-	class TestRunParams
+	class TestRunParams is public
 
 		pro willFailOnce from var = false
 	

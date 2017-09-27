@@ -32,6 +32,7 @@ class AssemblyModule is partial
 
 	def bindUse
 		base.bindUse
+		.topNameSpace.isForAssembly = true
 		.topNameSpace.bindUse
 
 
@@ -46,6 +47,7 @@ class CobraModule is partial
 class NameSpace is partial
 
 	get didBindUse from var as bool
+	pro isForAssembly from var as bool
 
 	def bindUse
 		if _didBindUse, return
@@ -61,6 +63,8 @@ class NameSpace is partial
 class UseDirective is partial
 
 	get didBindUse from var as bool
+	get fullName as String
+		return _fullName
 
 	def bindUse
 		_bindUse(false)

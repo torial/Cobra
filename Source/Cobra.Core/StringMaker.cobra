@@ -20,9 +20,9 @@ namespace Cobra.Core
 		var _methodName as String
 		var _memo = Set<of dynamic>()
 
-		cue init
+		cue init(methodName as String)
 			base.init
-			_methodName = ''  # ideally this wouldn't have to be set here
+			_methodName = methodName #SEAN Changed this to have a paremeter and set it.  # ideally this wouldn't have to be set here
 
 		get level from var
 			"""
@@ -305,7 +305,7 @@ namespace Cobra.Core
 				return .makeString(x)
 	
 		cue init
-			base.init
+			base.init('ToPrintString') #SEAN: Added parameter to get past the NotNull check
 			_methodName = 'ToPrintString'
 	
 		def collectionTypeToString(t as Type) as String is override
@@ -385,7 +385,7 @@ namespace Cobra.Core
 				return .makeString(x)
 	
 		cue init
-			base.init
+			base.init('ToTechString') #SEAN:Added parameter
 			_methodName = 'ToTechString'
 
 		def _makeString(x as Object?) as String

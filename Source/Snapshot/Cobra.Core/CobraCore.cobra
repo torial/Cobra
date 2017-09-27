@@ -148,12 +148,18 @@ namespace Cobra.Core
 				Default is to just run tests in this assembly.
 				If `deep` is true will also run tests in all referenced libraries as well
 				"""
+				print "test1:sean:1"
 				if CobraImp.showTestProgress, listener = Cobra.Core.Test.TextWriterListener(Console.out)
 				else, listener = Cobra.Core.Test.TextWriterOnlyOnFailureListener(Console.out)
+				print "test1:sean:2" 
 				tr = Cobra.Core.Test.TestRunner(listener)
+				print "test1:sean:3" 
 				if deep, tr.params.willTestLibraries = true
+				print "test1:sean:4" 
 				tr.runAllTests
+				print "test1:sean:5" 
 				if listener.testFailures, CobraCore.exit(1)
+				print "test1:sean:6"
 
 
 			## Detailed stack trace

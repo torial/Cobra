@@ -171,6 +171,7 @@ class CobraArgs
 		branch .action
 			on ActionType.Testify
 				options.set('testify',true)
+				options.set('testify-results','TestifyFile.txt')
 			on ActionType.Run
 				options.set('run',true) 
 			on ActionType.Test

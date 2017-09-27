@@ -162,6 +162,7 @@ class ClrBackEnd inherits BackEnd
 		ns.addUseDirective(UseDirective(useToken, ['System', 'Collections', 'Generic']))
 		ns.addUseDirective(UseDirective(useToken, ['System', 'IO']))
 		ns.addUseDirective(UseDirective(useToken, ['System', 'Text']))
+		ns.addUseDirective(UseDirective(useToken, ['System', 'Text', 'RegularExpressions']))
 		ns.addUseDirective(UseDirective(useToken, ['Cobra', 'Core']))
 		#ns.addUseDirective(UseDirective(useToken, ['Cobra', 'Extn']))  # to-do: what is this?
 	

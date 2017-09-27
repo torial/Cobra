@@ -8,6 +8,8 @@ enum CurlyLineNumberTreatment
 class CurlyWriter is abstract implements IDisposable
 
 	var _sb as StringBuilder
+	var importedNamespaces = List<of String>()
+	var _alreadySeenNamespaces = HashSet<of String>()
 
 	var _cobraLineNum as int
 	var _curlyLineNum as int
@@ -33,6 +35,7 @@ class CurlyWriter is abstract implements IDisposable
 	var _fName as String = ""
 	def setFileName(fileName as String) is protected
 		_fName = fileName
+		_alreadySeenNamespaces.clear
 
 	def hideLineNumbers
 		_hideLineNumbers += 1
@@ -51,6 +54,16 @@ class CurlyWriter is abstract implements IDisposable
 			# assert lineNum >= _cobraLineNum, '[lineNum], [_cobraLineNum]'
 			# ^ Can't assert that because of post while statements, helper methods, etc.
 			_cobraLineNum = lineNum
+		if node inherits UseDirective
+			fullName = node.fullName
+			if _alreadySeenNamespaces.contains(fullName)
+				return
+			.importedNamespaces.add(fullName)
+			.importedNamespaces.sort(ref .sortNames)
+			_alreadySeenNamespaces.add(fullName)
+			.write("using " + fullName + ";\r\n")
+	def sortNames(a as String,b as String) as int
+		return b.length.compareTo(a.length)
 
 	def start(fileName as String) is abstract
 
@@ -107,13 +120,27 @@ class CurlyWriter is abstract implements IDisposable
 
 	def write(value as char)
 		.write(value.toString)
+		
+	def _shouldClean(keepNamespace as bool, s as String?) as bool
+		if keepNamespace or s.startsWith("using ") or s.contains("namespace ")
+			return false
+		
+		if _fName.contains("Set.cobra")
+			return false
+			
+		if s.contains("Cobra.Core.Set") or s.contains("Cobra.Core.ISet")
+			return false
+		return true
+		
 
-	def write(s as String?)
+	def write(s as String?,keepNamespace as bool=false)
 		# performance sensitive code
 		if s is nil, return
-		if not s.startsWith("using ") and not s.contains("namespace") and not _fName.contains("Set.cobra")
-			#s = s.replace("Cobra.Core.","")
-			s = s.replace("global::System.Collections.Generic.","")
+		#SEAN: added to decrease generated file.
+		if _shouldClean( keepNamespace, s)
+			for importedNamespace in .importedNamespaces
+				if importedNamespace == "System", continue
+				s = s.replace(importedNamespace + '.',"")
 			
 		start = 0
 		length = s.length

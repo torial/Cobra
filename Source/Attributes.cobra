@@ -116,7 +116,13 @@ class AssemblyDecl
 		assert false
 		return nil
 
-	pro parentNameSpace from var
+	pro parentNameSpace as NameSpace?
+		get
+			return _parentNameSpace
+		set 
+			_parentNameSpace = value
+			if _parentNameSpace
+				_parentNameSpace.isForAssembly = true
 	
 	def extensionMemberFor(box as Box, name as String) as IMember?
 		return nil
